@@ -4,7 +4,7 @@ Theme based on [grub2-deadpool-theme](https://github.com/bishwassagar/grub2-dead
 
 ### Screenshots
 
-![Framework GRUB Theme](Screenshot.png?raw=true)
+![Framework GRUB Theme](https://i.imgur.com/mYg5mI6.png)
 
 ### Installation/Update
 
