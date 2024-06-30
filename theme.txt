@@ -1,7 +1,6 @@
 # Adapted from Deadpool Theme By @bishwassagar
 # Global properties
 title-text: ""
-desktop-image: "background.png"
 desktop-color: "#000000"
 terminal-box: "terminal_box_*.png"
 terminal-left: "0"

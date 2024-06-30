@@ -1,9 +1,36 @@
 #! /usr/bin/env bash
 
-THEME='framework-13-grub-theme'
+THEME='bgrt-grub-theme'
 
 # Pre-authorise sudo
 sudo echo
+
+# Detect existence of BGRT
+if [[ ! -r /sys/firmware/acpi/bgrt/image ]]; then
+	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/image"
+	echo "Exiting..."
+    exit
+fi
+
+if [[ ! -r /sys/firmware/acpi/bgrt/xoffset ]]; then
+	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/xoffset"
+	echo "Exiting..."
+    exit
+fi
+
+if [[ ! -r /sys/firmware/acpi/bgrt/image ]]; then
+	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/yoffset"
+	echo "Exiting..."
+    exit
+fi
+
+# Check if magick is installed
+if ! command -v magick &> /dev/null
+then
+    echo "ImageMagick is not installed. Please install it before running this script."
+    exit
+fi
+
 # Detect distro and set GRUB location and update method
 GRUB_DIR='grub'
 UPDATE_GRUB=''
@@ -43,11 +70,22 @@ if [ -e /etc/os-release ]; then
     fi
 fi
 
+echo 'Loading BGRT image'
+sudo magick /sys/firmware/acpi/bgrt/image PNG24:./theme/bgrt.png
+
+cp ./theme.txt ./theme/theme.txt
+echo '' >> ./theme/theme.txt
+echo '+ image {' >> ./theme/theme.txt
+echo "    left = $(</sys/firmware/acpi/bgrt/xoffset)" >> ./theme/theme.txt
+echo "    top  = $(</sys/firmware/acpi/bgrt/yoffset)" >> ./theme/theme.txt
+echo '    file = "bgrt.png"' >> ./theme/theme.txt
+echo '}' >> ./theme/theme.txt
+
 echo 'Creating GRUB themes directory'
 sudo mkdir -p /boot/${GRUB_DIR}/themes/${THEME}
 
 echo 'Copying theme to GRUB themes directory'
-sudo cp -r * /boot/${GRUB_DIR}/themes/${THEME}
+sudo cp -r ./theme/* /boot/${GRUB_DIR}/themes/${THEME}
 
 echo 'Removing other themes from GRUB config'
 sudo sed -i '/^GRUB_THEME=/d' /etc/default/grub
@@ -77,3 +115,7 @@ else
     echo    "- Arch, Gentoo and derivatives: \`grub-mkconfig -o /boot/grub/grub.cfg\`"
     echo    --------------------------------------------------------------------------------
 fi
+
+echo 'Cleanup'
+sudo rm ./theme/theme.txt
+sudo rm ./theme/bgrt.png
