@@ -9,26 +9,34 @@ sudo echo
 if [[ ! -r /sys/firmware/acpi/bgrt/image ]]; then
 	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/image"
 	echo "Exiting..."
-    exit
+	exit 1
 fi
 
 if [[ ! -r /sys/firmware/acpi/bgrt/xoffset ]]; then
 	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/xoffset"
 	echo "Exiting..."
-    exit
+	exit 1
 fi
 
 if [[ ! -r /sys/firmware/acpi/bgrt/image ]]; then
 	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/yoffset"
 	echo "Exiting..."
-    exit
+	exit 1
 fi
+
+# detect an instance of imagemagick to convert the BMP to GRUB-readable PNG
+MAGICK='magick'
 
 # Check if magick is installed
 if ! command -v magick &> /dev/null
 then
-    echo "ImageMagick is not installed. Please install it before running this script."
-    exit
+	if ! command -v convert &> /dev/null
+	then
+		echo "Could not find either magick or convert from ImageMagick. Please install it before running this script."
+		exit 1
+	else
+		MAGICK='convert'
+	fi
 fi
 
 # Detect distro and set GRUB location and update method
@@ -37,41 +45,41 @@ UPDATE_GRUB=''
 
 if [ -e /etc/os-release ]; then
 
-    source /etc/os-release
+	source /etc/os-release
 
-    if [[ "$ID" =~ (debian|ubuntu|solus) || \
-          "$ID_LIKE" =~ (debian|ubuntu) ]]; then
+	if [[ "$ID" =~ (debian|ubuntu|solus) || \
+		  "$ID_LIKE" =~ (debian|ubuntu) ]]; then
 
-        UPDATE_GRUB='update-grub'
+		UPDATE_GRUB='update-grub'
 
-    elif [[ "$ID" =~ (arch|manjaro|gentoo) || \
-            "$ID_LIKE" =~ (archlinux|manjaro|gentoo) ]]; then
+	elif [[ "$ID" =~ (arch|manjaro|gentoo) || \
+			"$ID_LIKE" =~ (archlinux|manjaro|gentoo) ]]; then
 
-        UPDATE_GRUB='grub-mkconfig -o /boot/grub/grub.cfg'
+		UPDATE_GRUB='grub-mkconfig -o /boot/grub/grub.cfg'
 
-    elif [[ "$ID" =~ (centos|fedora|opensuse) || \
-            "$ID_LIKE" =~ (fedora|rhel|suse) ]]; then
+	elif [[ "$ID" =~ (centos|fedora|opensuse) || \
+			"$ID_LIKE" =~ (fedora|rhel|suse) ]]; then
 
-        GRUB_CFG_PATH='/boot/grub2/grub.cfg'
+		GRUB_CFG_PATH='/boot/grub2/grub.cfg'
 
-        if [ -d /boot/efi/EFI/${ID} ]
-        then
-            GRUB_CFG_PATH="/boot/efi/EFI/${ID}/grub.cfg"
-        fi
+		if [ -d /boot/efi/EFI/${ID} ]
+		then
+			GRUB_CFG_PATH="/boot/efi/EFI/${ID}/grub.cfg"
+		fi
 
-        # BLS etries have 'kernel' class, copy corresponding icon
-        if [[ -d /boot/loader/entries && -e icons/${ID}.png ]]
-        then
-            cp icons/${ID}.png icons/kernel.png
-        fi
+		# BLS etries have 'kernel' class, copy corresponding icon
+		if [[ -d /boot/loader/entries && -e icons/${ID}.png ]]
+		then
+			cp icons/${ID}.png icons/kernel.png
+		fi
 
-        GRUB_DIR='grub2'
-        UPDATE_GRUB="grub2-mkconfig -o ${GRUB_CFG_PATH}"
-    fi
+		GRUB_DIR='grub2'
+		UPDATE_GRUB="grub2-mkconfig -o ${GRUB_CFG_PATH}"
+	fi
 fi
 
 echo 'Loading BGRT image'
-sudo magick /sys/firmware/acpi/bgrt/image PNG24:./theme/bgrt.png
+sudo "$MAGICK" /sys/firmware/acpi/bgrt/image PNG24:./theme/bgrt.png
 
 cp ./theme.txt ./theme/theme.txt
 echo '' >> ./theme/theme.txt
@@ -104,18 +112,18 @@ echo "GRUB_THEME=/boot/${GRUB_DIR}/themes/${THEME}/theme.txt" | sudo tee -a /etc
 
 echo 'Updating GRUB'
 if [[ $UPDATE_GRUB ]]; then
-    eval sudo "$UPDATE_GRUB"
+	eval sudo "$UPDATE_GRUB"
 else
-    echo   --------------------------------------------------------------------------------
-    echo    Cannot detect your distro, you will need to run \`grub-mkconfig\` as root manually.
-    echo
-    echo    Common ways:
-    echo    "- Debian, Ubuntu, Solus and derivatives: \`update-grub\` or \`grub-mkconfig -o /boot/grub/grub.cfg\`"
-    echo    "- RHEL, CentOS, Fedora, SUSE and derivatives: \`grub2-mkconfig -o /boot/grub2/grub.cfg\`"
-    echo    "- Arch, Gentoo and derivatives: \`grub-mkconfig -o /boot/grub/grub.cfg\`"
-    echo    --------------------------------------------------------------------------------
+	echo   --------------------------------------------------------------------------------
+	echo    Cannot detect your distro, you will need to run \`grub-mkconfig\` as root manually.
+	echo
+	echo    Common ways:
+	echo    "- Debian, Ubuntu, Solus and derivatives: \`update-grub\` or \`grub-mkconfig -o /boot/grub/grub.cfg\`"
+	echo    "- RHEL, CentOS, Fedora, SUSE and derivatives: \`grub2-mkconfig -o /boot/grub2/grub.cfg\`"
+	echo    "- Arch, Gentoo and derivatives: \`grub-mkconfig -o /boot/grub/grub.cfg\`"
+	echo    --------------------------------------------------------------------------------
 fi
 
-echo 'Cleanup'
+echo 'Cleaning up temporary files...'
 sudo rm ./theme/theme.txt
 sudo rm ./theme/bgrt.png
