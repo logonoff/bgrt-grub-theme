@@ -18,7 +18,7 @@ if [[ ! -r /sys/firmware/acpi/bgrt/xoffset ]]; then
 	exit 1
 fi
 
-if [[ ! -r /sys/firmware/acpi/bgrt/image ]]; then
+if [[ ! -r /sys/firmware/acpi/bgrt/yoffset ]]; then
 	echo "Sorry, I can't read /sys/firmware/acpi/bgrt/yoffset"
 	echo "Exiting..."
 	exit 1
